@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# env and secrets
+.env
+.env.*
+!env.sample
+
+# hardhat output
+artifacts/
+cache/
+coverage/
+typechain-types/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
