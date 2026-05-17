@@ -1,140 +1,182 @@
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
-const hre = require('hardhat');
+const hre  = require('hardhat');
 
 const { ethers, network } = hre;
 
+// Helper: işlemler arasında bekle (in-flight limit önlemi)
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function main() {
-  console.log('Starting FishBase contracts deployment...');
+  console.log('\n🚀 FishBase deployment başlıyor...');
+  console.log('📡 Ağ:', network.name);
 
   const [deployer] = await ethers.getSigners();
-  console.log('Deploying contracts with account:', deployer.address);
+  console.log('👤 Deployer:', deployer.address);
 
   const balance = await ethers.provider.getBalance(deployer.address);
-  console.log('Account balance:', ethers.formatEther(balance), 'ETH');
+  console.log('💰 Bakiye:', ethers.formatEther(balance), 'ETH\n');
 
-  const FishToken = await ethers.getContractFactory('FishToken');
-  const fishToken = await FishToken.deploy(deployer.address);
-  await fishToken.waitForDeployment();
-  const fishTokenAddress = await fishToken.getAddress();
-  console.log('Fish Token deployed to:', fishTokenAddress);
+  // Daha önce yarım kalmış deployment varsa yükle
+  const deploymentsDir = path.join(__dirname, '..', 'deployments');
+  const deploymentFile = path.join(deploymentsDir, `${network.name}.json`);
+  let existing = {};
+  if (fs.existsSync(deploymentFile)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+      console.log('♻️  Mevcut deployment bulundu, devam ediliyor...');
+    } catch (_) {}
+  }
 
-  const BoatNFT = await ethers.getContractFactory('BoatNFT');
-  const boatNFT = await BoatNFT.deploy(deployer.address);
-  await boatNFT.waitForDeployment();
-  const boatNFTAddress = await boatNFT.getAddress();
-  console.log('Boat NFT deployed to:', boatNFTAddress);
+  // ── 1. FishToken ─────────────────────────────────────────────────────────
+  let fishTokenAddress = existing?.contracts?.FishToken?.address;
+  if (fishTokenAddress) {
+    console.log('✅ FishToken zaten deploy edilmiş:', fishTokenAddress);
+  } else {
+    console.log('📄 FishToken deploy ediliyor...');
+    const FishToken = await ethers.getContractFactory('FishToken');
+    const fishToken = await FishToken.deploy(deployer.address);
+    await fishToken.waitForDeployment();
+    fishTokenAddress = await fishToken.getAddress();
+    console.log('✅ FishToken:', fishTokenAddress);
+    await sleep(3000);
+  }
 
-  const GameController = await ethers.getContractFactory('GameController');
-  const gameController = await GameController.deploy(
-    fishTokenAddress,
-    boatNFTAddress,
-    deployer.address
-  );
-  await gameController.waitForDeployment();
-  const gameControllerAddress = await gameController.getAddress();
-  console.log('Game Controller deployed to:', gameControllerAddress);
+  // ── 2. BoatNFT ───────────────────────────────────────────────────────────
+  const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // USDC on Base mainnet
+  let boatNFTAddress = existing?.contracts?.BoatNFT?.address;
+  if (boatNFTAddress) {
+    console.log('✅ BoatNFT zaten deploy edilmiş:', boatNFTAddress);
+  } else {
+    console.log('📄 BoatNFT deploy ediliyor...');
+    const BoatNFT = await ethers.getContractFactory('BoatNFT');
+    const boatNFT = await BoatNFT.deploy(deployer.address, USDC_BASE);
+    await boatNFT.waitForDeployment();
+    boatNFTAddress = await boatNFT.getAddress();
+    console.log('✅ BoatNFT:', boatNFTAddress);
+    await sleep(3000);
+  }
 
-  const BoostFishingNFT = await ethers.getContractFactory('BoostFishingNFT');
-  const boostFishingNFT = await BoostFishingNFT.deploy('', deployer.address);
-  await boostFishingNFT.waitForDeployment();
-  const boostFishingNFTAddress = await boostFishingNFT.getAddress();
-  console.log('Boost NFT deployed to:', boostFishingNFTAddress);
+  // ── 3. GameController ────────────────────────────────────────────────────
+  let gameControllerAddress = existing?.contracts?.GameController?.address;
+  if (gameControllerAddress) {
+    console.log('✅ GameController zaten deploy edilmiş:', gameControllerAddress);
+  } else {
+    console.log('📄 GameController deploy ediliyor...');
+    const GameController = await ethers.getContractFactory('GameController');
+    const gameController = await GameController.deploy(
+      fishTokenAddress,
+      boatNFTAddress,
+      deployer.address
+    );
+    await gameController.waitForDeployment();
+    gameControllerAddress = await gameController.getAddress();
+    console.log('✅ GameController:', gameControllerAddress);
+    await sleep(3000);
+  }
 
-  const setFishControllerTx = await fishToken.setGameController(gameControllerAddress);
-  await setFishControllerTx.wait();
-  console.log('Fish Token game controller set');
+  // ── 4. BoostFishingNFT ───────────────────────────────────────────────────
+  let boostFishingNFTAddress = existing?.contracts?.BoostFishingNFT?.address;
+  if (boostFishingNFTAddress) {
+    console.log('✅ BoostFishingNFT zaten deploy edilmiş:', boostFishingNFTAddress);
+  } else {
+    console.log('📄 BoostFishingNFT deploy ediliyor...');
+    const BoostFishingNFT = await ethers.getContractFactory('BoostFishingNFT');
+    const boostFishingNFT = await BoostFishingNFT.deploy('', deployer.address);
+    await boostFishingNFT.waitForDeployment();
+    boostFishingNFTAddress = await boostFishingNFT.getAddress();
+    console.log('✅ BoostFishingNFT:', boostFishingNFTAddress);
+    await sleep(3000);
+  }
 
-  const setBoatControllerTx = await boatNFT.setGameController(gameControllerAddress);
-  await setBoatControllerTx.wait();
-  console.log('Boat NFT game controller set');
+  // ── 5. Controller bağlantıları ──────────────────────────────────────────
+  const fishToken = await ethers.getContractAt('FishToken', fishTokenAddress);
+  const boatNFT   = await ethers.getContractAt('BoatNFT',   boatNFTAddress);
 
+  const currentFishController = await fishToken.gameController();
+  if (currentFishController.toLowerCase() !== gameControllerAddress.toLowerCase()) {
+    console.log('🔗 FishToken → GameController bağlanıyor...');
+    const tx = await fishToken.setGameController(gameControllerAddress);
+    await tx.wait();
+    console.log('✅ FishToken controller ayarlandı');
+    await sleep(2000);
+  } else {
+    console.log('✅ FishToken controller zaten ayarlı');
+  }
+
+  const currentBoatController = await boatNFT.gameController();
+  if (currentBoatController.toLowerCase() !== gameControllerAddress.toLowerCase()) {
+    console.log('🔗 BoatNFT → GameController bağlanıyor...');
+    const tx = await boatNFT.setGameController(gameControllerAddress);
+    await tx.wait();
+    console.log('✅ BoatNFT controller ayarlandı');
+  } else {
+    console.log('✅ BoatNFT controller zaten ayarlı');
+  }
+
+  // ── Sonuçları kaydet ─────────────────────────────────────────────────────
   const deploymentInfo = {
-    network: network.name,
-    chainId: network.config.chainId,
-    deployer: deployer.address,
+    network:   network.name,
+    chainId:   network.config.chainId,
+    deployer:  deployer.address,
     timestamp: new Date().toISOString(),
     contracts: {
-      FishToken: {
-        address: fishTokenAddress,
-        constructorArgs: [deployer.address],
-      },
-      BoatNFT: {
-        address: boatNFTAddress,
-        constructorArgs: [deployer.address],
-      },
-      GameController: {
-        address: gameControllerAddress,
-        constructorArgs: [fishTokenAddress, boatNFTAddress, deployer.address],
-      },
-      BoostFishingNFT: {
-        address: boostFishingNFTAddress,
-        constructorArgs: ['', deployer.address],
-      },
+      FishToken:      { address: fishTokenAddress,      constructorArgs: [deployer.address] },
+      BoatNFT:        { address: boatNFTAddress,        constructorArgs: [deployer.address] },
+      GameController: { address: gameControllerAddress, constructorArgs: [fishTokenAddress, boatNFTAddress, deployer.address] },
+      BoostFishingNFT:{ address: boostFishingNFTAddress,constructorArgs: ['', deployer.address] },
     },
   };
 
-  const deploymentsDir = path.join(__dirname, '..', 'deployments');
-  if (!fs.existsSync(deploymentsDir)) {
-    fs.mkdirSync(deploymentsDir, { recursive: true });
-  }
-
-  const deploymentFile = path.join(deploymentsDir, `${network.name}.json`);
+  if (!fs.existsSync(deploymentsDir)) fs.mkdirSync(deploymentsDir, { recursive: true });
   fs.writeFileSync(deploymentFile, JSON.stringify(deploymentInfo, null, 2));
 
-  const envContent = `# FishBase Contract Addresses - ${network.name}
+  const envContent =
+`# FishBase Contract Addresses — ${network.name} — ${new Date().toISOString()}
 FISH_TOKEN_ADDRESS=${fishTokenAddress}
 BOAT_NFT_ADDRESS=${boatNFTAddress}
 BOOST_NFT_ADDRESS=${boostFishingNFTAddress}
 GAME_CONTROLLER_ADDRESS=${gameControllerAddress}
 `;
-
   const envFile = path.join(deploymentsDir, `${network.name}.env`);
   fs.writeFileSync(envFile, envContent);
 
-  console.log('Deployment completed successfully.');
-  console.log('Fish Token:', fishTokenAddress);
-  console.log('Boat NFT:', boatNFTAddress);
-  console.log('Boost NFT:', boostFishingNFTAddress);
-  console.log('Game Controller:', gameControllerAddress);
-  console.log('Deployment info saved to:', deploymentFile);
-  console.log('Environment variables saved to:', envFile);
+  console.log('\n🎉 Deploy tamamlandı!');
+  console.log('─────────────────────────────────────');
+  console.log('  FishToken      :', fishTokenAddress);
+  console.log('  BoatNFT        :', boatNFTAddress);
+  console.log('  GameController :', gameControllerAddress);
+  console.log('  BoostFishingNFT:', boostFishingNFTAddress);
+  console.log('─────────────────────────────────────');
+  console.log('📁 JSON:', deploymentFile);
+  console.log('📁 ENV :', envFile);
 
+  // ── Verify ───────────────────────────────────────────────────────────────
   if (network.name !== 'hardhat' && network.name !== 'localhost') {
-    console.log('Waiting before verification...');
-    await new Promise((resolve) => setTimeout(resolve, 30000));
+    console.log('\n⏳ BaseScan verify için 30sn bekleniyor...');
+    await sleep(30000);
 
-    try {
-      await hre.run('verify:verify', {
-        address: fishTokenAddress,
-        constructorArguments: [deployer.address],
-      });
-
-      await hre.run('verify:verify', {
-        address: boatNFTAddress,
-        constructorArguments: [deployer.address],
-      });
-
-      await hre.run('verify:verify', {
-        address: gameControllerAddress,
-        constructorArguments: [fishTokenAddress, boatNFTAddress, deployer.address],
-      });
-
-      await hre.run('verify:verify', {
-        address: boostFishingNFTAddress,
-        constructorArguments: ['', deployer.address],
-      });
-
-      console.log('All contracts verified.');
-    } catch (error) {
-      console.log('Verification failed:', error.message);
+    for (const [name, info] of Object.entries(deploymentInfo.contracts)) {
+      try {
+        await hre.run('verify:verify', {
+          address: info.address,
+          constructorArguments: info.constructorArgs,
+        });
+        console.log(`✅ ${name} verified`);
+      } catch (err) {
+        if (err.message.includes('Already Verified')) {
+          console.log(`✅ ${name} zaten verified`);
+        } else {
+          console.log(`⚠️  ${name} verify başarısız:`, err.message);
+        }
+      }
     }
   }
 }
 
 main()
   .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('Deployment failed:', error);
+  .catch((err) => {
+    console.error('\n❌ Deploy başarısız:', err.message);
     process.exit(1);
   });

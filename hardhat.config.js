@@ -1,5 +1,5 @@
 require("@nomicfoundation/hardhat-toolbox");
-require("dotenv").config({ path: "../.env" });
+require("dotenv").config({ path: ".env" });
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -33,10 +33,8 @@ module.exports = {
     },
   },
   etherscan: {
-    apiKey: {
-      base: process.env.BASESCAN_API_KEY || "",
-      "base-sepolia": process.env.BASESCAN_API_KEY || "",
-    },
+    // Etherscan API V2 — tek key formatı
+    apiKey: process.env.BASESCAN_API_KEY || "",
     customChains: [
       {
         network: "base",
