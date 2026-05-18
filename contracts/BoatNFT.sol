@@ -211,8 +211,6 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
      *      Overpayments are refunded.
      */
     function mintBoat(BoatType boatType) external payable nonReentrant whenNotPaused {
-        require(boatType != BoatType.DINGHY, "Dinghy reserved for starter boats");
-
         BoatConfig storage cfg = boatConfigs[boatType];
         require(cfg.currentSupply < cfg.maxSupply, "Max supply reached");
         require(msg.value >= cfg.priceEth,         "Insufficient ETH");
@@ -235,8 +233,6 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
      *      Caller must approve this contract for at least priceUsdc USDC first.
      */
     function mintBoatWithUsdc(BoatType boatType) external nonReentrant whenNotPaused {
-        require(boatType != BoatType.DINGHY, "Dinghy reserved for starter boats");
-
         BoatConfig storage cfg = boatConfigs[boatType];
         require(cfg.currentSupply < cfg.maxSupply, "Max supply reached");
         require(cfg.priceUsdc > 0,                 "USDC payment not configured");
