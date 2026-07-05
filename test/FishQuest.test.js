@@ -15,7 +15,7 @@ describe("FishQuest Game Contracts", function () {
 
     // Deploy Boat NFT
     const BoatNFT = await ethers.getContractFactory("BoatNFT");
-    boatNFT = await BoatNFT.deploy(owner.address);
+    boatNFT = await BoatNFT.deploy(owner.address, owner.address);
     await boatNFT.waitForDeployment();
 
     // Deploy Game Controller
@@ -69,9 +69,9 @@ describe("FishQuest Game Contracts", function () {
     });
 
     it("Should mint paid boats correctly", async function () {
-      const sailboatPrice = ethers.parseEther("0.025");
+      const sailboatPrice = ethers.parseEther("0.00034");
       
-      await boatNFT.connect(player1).mintBoat(player1.address, 1, { // SAILBOAT
+      await boatNFT.connect(player1).mintBoat(1, { // SAILBOAT
         value: sailboatPrice
       });
       
@@ -88,8 +88,8 @@ describe("FishQuest Game Contracts", function () {
       await boatNFT.mintStarterBoat(player1.address);
       
       // Mint sailboat
-      const sailboatPrice = ethers.parseEther("0.025");
-      await boatNFT.connect(player1).mintBoat(player1.address, 1, {
+      const sailboatPrice = ethers.parseEther("0.00034");
+      await boatNFT.connect(player1).mintBoat(1, {
         value: sailboatPrice
       });
       
@@ -214,7 +214,7 @@ describe("FishQuest Game Contracts", function () {
       // Try to claim again immediately
       await expect(
         gameController.connect(player1).claimDaily()
-      ).to.be.revertedWith("Cannot claim yet");
+      ).to.be.revertedWith("Claim not ready yet");
     });
   });
 

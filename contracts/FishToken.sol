@@ -25,7 +25,7 @@ contract FishToken is ERC20, Ownable, Pausable {
     /// @dev Only the GameController may call the mint functions
     address public gameController;
 
-    /// @dev Tiered XP → token conversion rates
+    /// @dev Tiered XP to token conversion rates
     mapping(uint256 => uint256) public xpToTokenRate;
 
     // -----------------------------------------------------------------------
@@ -43,12 +43,12 @@ contract FishToken is ERC20, Ownable, Pausable {
         ERC20("Fish Token", "FISH")
         Ownable(initialOwner)
     {
-        // Tiered XP → FISH conversion
-        xpToTokenRate[100]  = 10  * 10 ** 18;  //  100 XP → 10  FISH
-        xpToTokenRate[500]  = 60  * 10 ** 18;  //  500 XP → 60  FISH
-        xpToTokenRate[1000] = 150 * 10 ** 18;  // 1000 XP → 150 FISH
-        xpToTokenRate[2500] = 400 * 10 ** 18;  // 2500 XP → 400 FISH
-        xpToTokenRate[5000] = 900 * 10 ** 18;  // 5000 XP → 900 FISH
+        // Tiered XP to FISH conversion
+        xpToTokenRate[100]  = 10  * 10 ** 18;  //  100 XP to 10  FISH
+        xpToTokenRate[500]  = 60  * 10 ** 18;  //  500 XP to 60  FISH
+        xpToTokenRate[1000] = 150 * 10 ** 18;  // 1000 XP to 150 FISH
+        xpToTokenRate[2500] = 400 * 10 ** 18;  // 2500 XP to 400 FISH
+        xpToTokenRate[5000] = 900 * 10 ** 18;  // 5000 XP to 900 FISH
     }
 
     // -----------------------------------------------------------------------

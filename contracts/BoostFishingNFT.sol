@@ -26,10 +26,10 @@ contract BoostFishingNFT is ERC1155, Ownable, Pausable, ReentrancyGuard {
         bool    enabled;
     }
 
-    /// @dev boostId → tier definition
+    /// @dev boostId to tier definition
     mapping(uint256 => BoostTier)                      private _boosts;
 
-    /// @dev wallet → boostId → already minted (one per wallet per tier)
+    /// @dev wallet to boostId to already minted (one per wallet per tier)
     mapping(address => mapping(uint256 => bool)) public hasMinted;
 
     // -----------------------------------------------------------------------

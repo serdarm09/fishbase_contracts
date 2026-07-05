@@ -27,11 +27,11 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
 
     using Strings for uint256;
 
-    // ── USDC ────────────────────────────────────────────────────────────────
+    // USDC
     // USDC on Base mainnet (6 decimals)
     IERC20 public usdc;
 
-    // ── Types ───────────────────────────────────────────────────────────────
+    // Types
 
     enum BoatType { DINGHY, SAILBOAT, YACHT, TRAWLER, MEGASHIP }
 
@@ -52,7 +52,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
         bool     isActive;
     }
 
-    // ── State ───────────────────────────────────────────────────────────────
+    // State
 
     mapping(BoatType => BoatConfig) public boatConfigs;
     mapping(uint256 => BoatData)    public boats;
@@ -61,7 +61,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
     uint256 private _tokenIdCounter = 1;
     address public  gameController;
 
-    // ── Events ──────────────────────────────────────────────────────────────
+    // Events
 
     event BoatMinted(address indexed to, uint256 indexed tokenId, BoatType boatType, bool paidWithUsdc);
     event BoatActivated(address indexed owner, uint256 indexed tokenId);
@@ -69,7 +69,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
     event EthPriceUpdated(BoatType boatType, uint256 newPriceWei);
     event UsdcAddressUpdated(address newUsdc);
 
-    // ── Constructor ─────────────────────────────────────────────────────────
+    // Constructor
 
     /// @param _usdc  USDC token address on the target chain
     constructor(address initialOwner, address _usdc)
@@ -82,7 +82,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
     }
 
     function _initializeBoatConfigs() private {
-        // Dinghy — free starter
+        // Dinghy - free starter
         boatConfigs[BoatType.DINGHY] = BoatConfig({
             name:          "Dinghy",
             dailyXp:       10,
@@ -93,7 +93,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
             baseURI:       "https://fishbase.xyz/metadata/dinghy/"
         });
 
-        // Sailboat — $1
+        // Sailboat - $1
         // ~0.00034 ETH @ $3 000/ETH (owner adjusts via setEthPrice)
         boatConfigs[BoatType.SAILBOAT] = BoatConfig({
             name:          "Sailboat",
@@ -105,7 +105,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
             baseURI:       "https://fishbase.xyz/metadata/sailboat/"
         });
 
-        // Yacht — $3
+        // Yacht - $3
         boatConfigs[BoatType.YACHT] = BoatConfig({
             name:          "Yacht",
             dailyXp:       50,
@@ -116,7 +116,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
             baseURI:       "https://fishbase.xyz/metadata/yacht/"
         });
 
-        // Trawler — $5
+        // Trawler - $5
         boatConfigs[BoatType.TRAWLER] = BoatConfig({
             name:          "Trawler",
             dailyXp:       100,
@@ -127,7 +127,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
             baseURI:       "https://fishbase.xyz/metadata/trawler/"
         });
 
-        // Mega Ship — $6.99
+        // Mega Ship - $6.99
         boatConfigs[BoatType.MEGASHIP] = BoatConfig({
             name:          "Mega Ship",
             dailyXp:       200,
@@ -139,14 +139,14 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
         });
     }
 
-    // ── Modifiers ───────────────────────────────────────────────────────────
+    // Modifiers
 
     modifier onlyGameController() {
         require(msg.sender == gameController, "Caller is not game controller");
         _;
     }
 
-    // ── Administration ──────────────────────────────────────────────────────
+    // Administration
 
     function setGameController(address _gameController) external onlyOwner {
         require(_gameController != address(0), "Zero address");
@@ -204,7 +204,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
     function pause()   external onlyOwner { _pause(); }
     function unpause() external onlyOwner { _unpause(); }
 
-    // ── Public minting — pay with ETH ───────────────────────────────────────
+    // Public minting - pay with ETH
 
     /**
      * @dev Mint a boat paying with ETH.
@@ -226,7 +226,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
         }
     }
 
-    // ── Public minting — pay with USDC ──────────────────────────────────────
+    // Public minting - pay with USDC
 
     /**
      * @dev Mint a boat paying with USDC.
@@ -247,7 +247,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
         emit BoatMinted(msg.sender, tokenId, boatType, true);
     }
 
-    // ── Minting — game controller only ──────────────────────────────────────
+    // Minting - game controller only
 
     /**
      * @dev Mint a free Dinghy to a new player (called by GameController on register).
@@ -278,7 +278,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
         emit BoatActivated(to, tokenId);
     }
 
-    // ── Activation ──────────────────────────────────────────────────────────
+    // Activation
 
     function activateBoat(uint256 tokenId) external {
         require(ownerOf(tokenId) == msg.sender, "Not the boat owner");
@@ -295,7 +295,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
         emit BoatActivated(msg.sender, tokenId);
     }
 
-    // ── View helpers ─────────────────────────────────────────────────────────
+    // View helpers
 
     function getActiveBoat(address user) external view returns (
         uint256      tokenId,
@@ -316,7 +316,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
         return boatConfigs[boatType];
     }
 
-    // ── Internal helpers ────────────────────────────────────────────────────
+    // Internal helpers
 
     function _mintBoatInternal(
         address       to,
@@ -344,7 +344,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
         }
     }
 
-    // ── ERC-721 overrides ───────────────────────────────────────────────────
+    // ERC-721 overrides
 
     function _update(address to, uint256 tokenId, address auth)
         internal override(ERC721, ERC721Enumerable) returns (address)

@@ -23,7 +23,7 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
     FishToken public fishToken;
     BoatNFT public boatNFT;
 
-    /// @dev 100×100 grid for boat placement
+    /// @dev 100x100 grid for boat placement
     uint256 public constant GRID_SIZE = 100;
 
     /// @dev Fee charged per placement / movement (adjustable by owner)
@@ -35,7 +35,7 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
     /// @dev Days after a move during which the movement bonus applies
     uint256 public constant MOVEMENT_BONUS_DAYS = 3;
 
-    /// @dev Movement bonus multiplier expressed in percentage points (200 = 2×)
+    /// @dev Movement bonus multiplier expressed in percentage points (200 = 2x)
     uint256 public constant MOVEMENT_BONUS_MULTIPLIER = 200;
 
     struct PlayerData {
@@ -62,7 +62,7 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
     /// @dev Player state keyed by wallet address
     mapping(address => PlayerData) public players;
 
-    /// @dev Grid cell → boat at that cell
+    /// @dev Grid cell to boat at that cell
     mapping(uint256 => mapping(uint256 => BoatPosition)) public grid;
 
     /// @dev Quick occupancy look-up
@@ -116,8 +116,18 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
             registered:    true
         });
 
-        boatNFT.mintStarterBoat(msg.sender);
+        if (boatNFT.balanceOf(msg.sender) == 0) {
+            boatNFT.mintStarterBoat(msg.sender);
+        } else {
+            (uint256 boatTokenId, , , ) = boatNFT.getActiveBoat(msg.sender);
+            require(boatTokenId > 0, "No active boat");
+        }
+
         emit PlayerRegistered(msg.sender);
+    }
+
+    function isRegistered(address player) external view returns (bool) {
+        return players[player].registered;
     }
 
     // -----------------------------------------------------------------------
@@ -269,10 +279,10 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
         // Movement bonus / decay only applies once the player has actually moved
         if (p.lastMoveDate > 0) {
             if (block.timestamp <= p.lastMoveDate + MOVEMENT_BONUS_DAYS * 24 hours) {
-                // Within the bonus window → 2× multiplier
+                // Within the bonus window: 2x multiplier
                 finalXp = (finalXp * MOVEMENT_BONUS_MULTIPLIER) / 100;
             } else {
-                // Beyond the bonus window → apply decay
+                // Beyond the bonus window: apply decay
                 uint256 daysSinceMove = (block.timestamp - p.lastMoveDate) / 24 hours;
                 if (daysSinceMove > MOVEMENT_BONUS_DAYS) {
                     uint256 decayDays    = daysSinceMove - MOVEMENT_BONUS_DAYS;
@@ -288,14 +298,14 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
 
     /**
      * @dev Maps a streak day count to a percentage multiplier.
-     *      Examples: day 1 → 100 %, day 7 → 200 %, day 30 → 500 %.
+     *      Examples: day 1 = 100 %, day 7 = 200 %, day 30 = 500 %.
      */
     function calculateStreakMultiplier(uint256 streakDay) public pure returns (uint256) {
-        if (streakDay >= 100) return 1000; // 10×
-        if (streakDay >= 30)  return 500;  // 5×
-        if (streakDay >= 14)  return 300;  // 3×
-        if (streakDay >= 7)   return 200;  // 2×
-        // Linear 100 %→150 % for days 1–6
+        if (streakDay >= 100) return 1000; // 10x
+        if (streakDay >= 30)  return 500;  // 5x
+        if (streakDay >= 14)  return 300;  // 3x
+        if (streakDay >= 7)   return 200;  // 2x
+        // Linear 100 % to 150 % for days 1-6
         return 100 + (streakDay - 1) * 10;
     }
 

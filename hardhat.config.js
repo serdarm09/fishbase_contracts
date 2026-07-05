@@ -33,7 +33,7 @@ module.exports = {
     },
   },
   etherscan: {
-    // Etherscan API V2 — tek key formatı
+    // Etherscan API V2 single-key format.
     apiKey: process.env.BASESCAN_API_KEY || "",
     customChains: [
       {
