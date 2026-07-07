@@ -304,7 +304,7 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
         string memory name
     ) {
         tokenId = activeBoats[user];
-        if (tokenId == 0) return (0, BoatType.DINGHY, 0, "");
+        if (tokenId == 0 || _ownerOf(tokenId) != user) return (0, BoatType.DINGHY, 0, "");
 
         BoatData   memory boat = boats[tokenId];
         BoatConfig memory cfg  = boatConfigs[boat.boatType];
@@ -349,7 +349,21 @@ contract BoatNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
     function _update(address to, uint256 tokenId, address auth)
         internal override(ERC721, ERC721Enumerable) returns (address)
     {
-        return super._update(to, tokenId, auth);
+        address previousOwner = super._update(to, tokenId, auth);
+
+        if (previousOwner != address(0) && previousOwner != to && activeBoats[previousOwner] == tokenId) {
+            activeBoats[previousOwner] = 0;
+            boats[tokenId].isActive = false;
+        }
+
+        if (to != address(0) && previousOwner != to && activeBoats[to] == 0) {
+            activeBoats[to] = tokenId;
+            boats[tokenId].isActive = true;
+            boats[tokenId].lastUsed = block.timestamp;
+            emit BoatActivated(to, tokenId);
+        }
+
+        return previousOwner;
     }
 
     function _increaseBalance(address account, uint128 value)

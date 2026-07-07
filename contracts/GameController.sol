@@ -26,8 +26,9 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
     /// @dev 100x100 grid for boat placement
     uint256 public constant GRID_SIZE = 100;
 
-    /// @dev Fee charged per placement / movement (adjustable by owner)
-    uint256 public placementFee = 0.001 ether;
+    /// @dev Optional protocol fee charged per placement / movement.
+    ///      Defaults to zero so users only pay the Base network gas fee.
+    uint256 public placementFee = 0;
 
     /// @dev XP decay rate per idle day beyond the movement-bonus window (5 %)
     uint256 public constant XP_DECAY_RATE = 5;
@@ -75,6 +76,7 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
     event PlayerRegistered(address indexed player);
     event BoatPlaced(address indexed player, uint256 x, uint256 y, uint256 boatTokenId);
     event BoatMoved(address indexed player, uint256 fromX, uint256 fromY, uint256 toX, uint256 toY);
+    event BoatPositionCleared(address indexed player, uint256 x, uint256 y, uint256 boatTokenId);
     event DailyClaimed(address indexed player, uint256 xpEarned, uint256 tokensEarned, uint256 streak);
     event XPEarned(address indexed player, uint256 amount, string reason);
     event PlacementFeeUpdated(uint256 oldFee, uint256 newFee);
@@ -140,6 +142,7 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
      */
     function placeBoat(uint256 x, uint256 y) external payable nonReentrant whenNotPaused {
         require(x < GRID_SIZE && y < GRID_SIZE, "Position out of bounds");
+        _clearStalePositionIfNeeded(x, y);
         require(!isPositionOccupied[x][y],       "Position already occupied");
         require(msg.value >= placementFee,        "Insufficient placement fee");
 
@@ -182,6 +185,7 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
      */
     function moveBoat(uint256 newX, uint256 newY) external payable nonReentrant whenNotPaused {
         require(newX < GRID_SIZE && newY < GRID_SIZE, "Position out of bounds");
+        _clearStalePositionIfNeeded(newX, newY);
         require(!isPositionOccupied[newX][newY],       "Position already occupied");
         require(msg.value >= placementFee,             "Insufficient movement fee");
 
@@ -197,6 +201,7 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
         delete grid[oldX][oldY];
 
         (uint256 boatTokenId, , , ) = boatNFT.getActiveBoat(msg.sender);
+        require(boatTokenId > 0, "No active boat");
 
         grid[newX][newY] = BoatPosition({
             owner:       msg.sender,
@@ -250,13 +255,14 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
         }
 
         uint256 finalXp = calculateFinalXP(msg.sender, dailyXp);
+        uint256 tokensEarned = fishToken.calculateTokenReward(finalXp);
 
         player.totalXp      += finalXp;
         player.lastClaimDate = block.timestamp;
 
         fishToken.mintDailyReward(msg.sender, finalXp);
 
-        emit DailyClaimed(msg.sender, finalXp, finalXp, player.currentStreak);
+        emit DailyClaimed(msg.sender, finalXp, tokensEarned, player.currentStreak);
         emit XPEarned(msg.sender, finalXp, "daily_claim");
     }
 
@@ -372,5 +378,23 @@ contract GameController is Ownable, Pausable, ReentrancyGuard {
         if (amount == 0) return;
         (bool ok, ) = payable(msg.sender).call{value: amount}("");
         require(ok, "Refund failed");
+    }
+
+    function _clearStalePositionIfNeeded(uint256 x, uint256 y) internal {
+        if (!isPositionOccupied[x][y]) return;
+
+        BoatPosition memory position = grid[x][y];
+        if (position.owner == address(0)) {
+            isPositionOccupied[x][y] = false;
+            delete grid[x][y];
+            return;
+        }
+
+        (uint256 activeBoatTokenId, , , ) = boatNFT.getActiveBoat(position.owner);
+        if (activeBoatTokenId != position.boatTokenId) {
+            isPositionOccupied[x][y] = false;
+            delete grid[x][y];
+            emit BoatPositionCleared(position.owner, x, y, position.boatTokenId);
+        }
     }
 }

@@ -2,7 +2,7 @@
   "network": "base",
   "chainId": 8453,
   "deployer": "0xc8e963969D25f3d5Fd8CCf0acbe5Bb9d2Cc83693",
-  "timestamp": "2026-05-17T17:55:07.436Z",
+  "timestamp": "2026-07-07T20:54:12.604Z",
   "contracts": {
     "FishToken": {
       "address": "0x1208863b62dF2b0e086cE4ac98a7b099b52Ef104",
@@ -18,7 +18,7 @@
       ]
     },
     "GameController": {
-      "address": "0xf1a37E37D2b1faFA9D495D50b7E82C33e9878FA1",
+      "address": "0xE4d8674C8CeBD2176580F6C11ad1062280076f47",
       "constructorArgs": [
         "0x1208863b62dF2b0e086cE4ac98a7b099b52Ef104",
         "0x667dA3BB4EDaE93c71427D17D74Df430aA34B09F",

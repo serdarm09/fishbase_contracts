@@ -17,6 +17,16 @@ async function main() {
   const balance = await ethers.provider.getBalance(deployer.address);
   console.log('Balance:', ethers.formatEther(balance), 'ETH\n');
 
+  const redeployAll = process.env.REDEPLOY_ALL_CONTRACTS === 'true';
+  const redeployFishToken = redeployAll || process.env.REDEPLOY_FISH_TOKEN === 'true';
+  const redeployBoatNFT = redeployAll || process.env.REDEPLOY_BOAT_NFT === 'true';
+  const redeployBoostFishingNFT = redeployAll || process.env.REDEPLOY_BOOST_NFT === 'true';
+  const redeployGameController =
+    redeployAll ||
+    redeployFishToken ||
+    redeployBoatNFT ||
+    process.env.REDEPLOY_GAME_CONTROLLER === 'true';
+
   // Resume a previous partial deployment if one exists.
   const deploymentsDir = path.join(__dirname, '..', 'deployments');
   const deploymentFile = path.join(deploymentsDir, `${network.name}.json`);
@@ -29,10 +39,13 @@ async function main() {
   }
 
   // 1. FishToken
-  let fishTokenAddress = existing?.contracts?.FishToken?.address;
+  let fishTokenAddress = redeployFishToken ? undefined : existing?.contracts?.FishToken?.address;
   if (fishTokenAddress) {
     console.log('FishToken already deployed:', fishTokenAddress);
   } else {
+    if (redeployFishToken && existing?.contracts?.FishToken?.address) {
+      console.log('Redeploying FishToken, ignoring existing address:', existing.contracts.FishToken.address);
+    }
     console.log('Deploying FishToken...');
     const FishToken = await ethers.getContractFactory('FishToken');
     const fishToken = await FishToken.deploy(deployer.address);
@@ -44,17 +57,21 @@ async function main() {
 
   // 2. BoatNFT
   const configuredUsdcAddress = process.env.USDC_ADDRESS;
-  let boatNFTAddress = existing?.contracts?.BoatNFT?.address;
+  const boatUsdcAddress = configuredUsdcAddress || existing?.contracts?.BoatNFT?.constructorArgs?.[1];
+  let boatNFTAddress = redeployBoatNFT ? undefined : existing?.contracts?.BoatNFT?.address;
   if (boatNFTAddress) {
     console.log('BoatNFT already deployed:', boatNFTAddress);
   } else {
-    if (!configuredUsdcAddress) {
+    if (redeployBoatNFT && existing?.contracts?.BoatNFT?.address) {
+      console.log('Redeploying BoatNFT, ignoring existing address:', existing.contracts.BoatNFT.address);
+    }
+    if (!boatUsdcAddress) {
       throw new Error('USDC_ADDRESS is required to deploy BoatNFT');
     }
 
     console.log('Deploying BoatNFT...');
     const BoatNFT = await ethers.getContractFactory('BoatNFT');
-    const boatNFT = await BoatNFT.deploy(deployer.address, configuredUsdcAddress);
+    const boatNFT = await BoatNFT.deploy(deployer.address, boatUsdcAddress);
     await boatNFT.waitForDeployment();
     boatNFTAddress = await boatNFT.getAddress();
     console.log('BoatNFT:', boatNFTAddress);
@@ -62,10 +79,13 @@ async function main() {
   }
 
   // 3. GameController
-  let gameControllerAddress = existing?.contracts?.GameController?.address;
+  let gameControllerAddress = redeployGameController ? undefined : existing?.contracts?.GameController?.address;
   if (gameControllerAddress) {
     console.log('GameController already deployed:', gameControllerAddress);
   } else {
+    if (redeployGameController && existing?.contracts?.GameController?.address) {
+      console.log('Redeploying GameController, ignoring existing address:', existing.contracts.GameController.address);
+    }
     console.log('Deploying GameController...');
     const GameController = await ethers.getContractFactory('GameController');
     const gameController = await GameController.deploy(
@@ -80,13 +100,17 @@ async function main() {
   }
 
   // 4. BoostFishingNFT
-  let boostFishingNFTAddress = existing?.contracts?.BoostFishingNFT?.address;
+  const boostBaseUri = process.env.BOOST_BASE_URI || existing?.contracts?.BoostFishingNFT?.constructorArgs?.[0] || '';
+  let boostFishingNFTAddress = redeployBoostFishingNFT ? undefined : existing?.contracts?.BoostFishingNFT?.address;
   if (boostFishingNFTAddress) {
     console.log('BoostFishingNFT already deployed:', boostFishingNFTAddress);
   } else {
+    if (redeployBoostFishingNFT && existing?.contracts?.BoostFishingNFT?.address) {
+      console.log('Redeploying BoostFishingNFT, ignoring existing address:', existing.contracts.BoostFishingNFT.address);
+    }
     console.log('Deploying BoostFishingNFT...');
     const BoostFishingNFT = await ethers.getContractFactory('BoostFishingNFT');
-    const boostFishingNFT = await BoostFishingNFT.deploy('', deployer.address);
+    const boostFishingNFT = await BoostFishingNFT.deploy(boostBaseUri, deployer.address);
     await boostFishingNFT.waitForDeployment();
     boostFishingNFTAddress = await boostFishingNFT.getAddress();
     console.log('BoostFishingNFT:', boostFishingNFTAddress);
@@ -126,9 +150,9 @@ async function main() {
     timestamp: new Date().toISOString(),
     contracts: {
       FishToken:      { address: fishTokenAddress,      constructorArgs: [deployer.address] },
-      BoatNFT:        { address: boatNFTAddress,        constructorArgs: [deployer.address, configuredUsdcAddress || existing?.contracts?.BoatNFT?.constructorArgs?.[1] || ''] },
+      BoatNFT:        { address: boatNFTAddress,        constructorArgs: [deployer.address, boatUsdcAddress] },
       GameController: { address: gameControllerAddress, constructorArgs: [fishTokenAddress, boatNFTAddress, deployer.address] },
-      BoostFishingNFT:{ address: boostFishingNFTAddress,constructorArgs: ['', deployer.address] },
+      BoostFishingNFT:{ address: boostFishingNFTAddress,constructorArgs: [boostBaseUri, deployer.address] },
     },
   };
 

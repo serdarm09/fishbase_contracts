@@ -100,6 +100,19 @@ describe("FishQuest Game Contracts", function () {
       expect(activeBoat.tokenId).to.equal(2);
       expect(activeBoat.boatType).to.equal(1); // SAILBOAT
     });
+
+    it("Should clear active boat from the previous owner after transfer", async function () {
+      await boatNFT.setGameController(owner.address);
+      await boatNFT.mintStarterBoat(player1.address);
+
+      await boatNFT.connect(player1).transferFrom(player1.address, player2.address, 1);
+
+      const previousOwnerActiveBoat = await boatNFT.getActiveBoat(player1.address);
+      expect(previousOwnerActiveBoat.tokenId).to.equal(0);
+
+      const newOwnerActiveBoat = await boatNFT.getActiveBoat(player2.address);
+      expect(newOwnerActiveBoat.tokenId).to.equal(1);
+    });
   });
 
   describe("Game Controller", function () {
@@ -215,6 +228,22 @@ describe("FishQuest Game Contracts", function () {
       await expect(
         gameController.connect(player1).claimDaily()
       ).to.be.revertedWith("Claim not ready yet");
+    });
+
+    it("Should prevent moving after the active boat was transferred away", async function () {
+      const placementFee = ethers.parseEther("0.001");
+
+      await gameController.connect(player1).placeBoat(10, 20, {
+        value: placementFee
+      });
+
+      await boatNFT.connect(player1).transferFrom(player1.address, player2.address, 1);
+
+      await expect(
+        gameController.connect(player1).moveBoat(15, 25, {
+          value: placementFee
+        })
+      ).to.be.revertedWith("No active boat");
     });
   });
 
