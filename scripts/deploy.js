@@ -138,8 +138,25 @@ async function main() {
     const tx = await boatNFT.setGameController(gameControllerAddress);
     await tx.wait();
     console.log('BoatNFT controller configured');
+    await sleep(2000);
   } else {
     console.log('BoatNFT controller already configured');
+  }
+
+  const targetPlacementFeeEth = process.env.PLACEMENT_FEE_ETH || '0';
+  const targetPlacementFee = ethers.parseEther(targetPlacementFeeEth);
+  const gameController = await ethers.getContractAt('GameController', gameControllerAddress);
+  const currentPlacementFee = await gameController.placementFee();
+  if (currentPlacementFee !== targetPlacementFee) {
+    console.log(
+      `Updating placement fee from ${ethers.formatEther(currentPlacementFee)} ETH to ${targetPlacementFeeEth} ETH...`
+    );
+    const tx = await gameController.setPlacementFee(targetPlacementFee);
+    await tx.wait();
+    console.log('Placement fee configured');
+    await sleep(2000);
+  } else {
+    console.log(`Placement fee already configured: ${targetPlacementFeeEth} ETH`);
   }
 
   // Save results.
